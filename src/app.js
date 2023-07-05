@@ -99,7 +99,7 @@ app.post("/loginUser", async (req, res)=>{
 
 })
 
-//// usuario logado pegando o token --- arrumar token
+//// usuario logado pegando o token 
 app.get("/usuarioLogado", async(req, res)=>{
 
     const {autorizacao} = req.headers
@@ -111,7 +111,7 @@ app.get("/usuarioLogado", async(req, res)=>{
 
     try{
 
-        const sessao = await db.collection("sessao").findOne({ token })
+        const sessao = await db.collection("sessao").findOne({ sessionToken:token })
         console.log("Session:", sessao);
 		if (!sessao) return res.sendStatus(401)        
 
@@ -182,8 +182,28 @@ app.post("/saida", async(req, res)=>{
 
 /// listagem de operações - sem token 
 
-app.get("operacoes", async (req, res)=>{
-    
+app.get("/operacoes", async (req, res)=>{
+
+
+    try {
+
+        const user = await db.collection("usuario").findOne({ _id: user.userId });
+        if(!user) return res.sendStatus(404)
+
+        const entrada = await db.collection("entrada").findMany({valor, descricao})
+        if(!entrada) return res.sendStatus(404)
+
+        const saida = await db.collection("saida").findMany({valor, descricao})
+        if(!saida) return res.sendStatus(404)
+
+
+        res.sendStatus(200)
+
+    } catch(err){
+        res.status(500).send(err.message)
+
+    }
+
 })
 
     /// porta sendo utilizada
