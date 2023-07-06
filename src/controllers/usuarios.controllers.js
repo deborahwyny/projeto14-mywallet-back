@@ -1,7 +1,7 @@
 import  bcrypt from 'bcrypt'
-import { db } from '../app.js'
-import { cadastroSchema } from '../app.js'
-import { loginSchema } from '../app.js'
+import { db } from '../database/database.connection.js';
+import { cadastroSchema } from '../schemmas/usuario.schemma.js';
+import { loginSchema } from '../schemmas/usuario.schemma.js';
 import { v4 as uuid } from 'uuid';
 
 

@@ -1,5 +1,5 @@
-import { db } from '../app.js'
-
+import { db } from '../database/database.connection.js'
+import { transacaoSchema } from '../schemmas/transacao.schemma.js'
 
 export async function entrada (req, res){
 
