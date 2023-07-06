@@ -6,6 +6,8 @@ import dotenv from "dotenv"
 import bcrypt from 'bcrypt'
 import { v4 as uuid } from 'uuid';
 import dayjs from 'dayjs'
+import { cadastroUser, loginUser, usuarioLogado } from './controllers/usuarios.controllers.js'
+import { entrada, operacoes, saida } from './controllers/transacao.controllers.js'
 
 /// configurações
 const app = express();
@@ -23,189 +25,47 @@ try {
     console.log(err.message)
 }
 
-const db = mongoClient.db()
+export const db = mongoClient.db()
 
 
 /// schemas
 
-const cadastroSchema = joi.object({name: joi.string().required().trim(),
+export const cadastroSchema = joi.object({name: joi.string().required().trim(),
 email: joi.string().required().trim(),
 senha: joi.string().min(3).trim(),
 repeat_password: joi.ref('password')
 })
 
-const loginSchema = joi.object({
+export const loginSchema = joi.object({
     email: joi.string().required().trim(),
     senha: joi.string().required().min(3).trim()
   });
 
 
-const transacaoSchema = joi.object({
+export const transacaoSchema = joi.object({
     valor: joi.number().required().positive(),
     descricao: joi.string().required()
 })
 
-/// endponts
-/// cadastrar usuario
-app.post("/cadastroUser", async (req, res)=>{
+/// endpoints
 
-    const {name, email, senha} = req.body
-    
-    const validacao = cadastroSchema.validate(req.body)
-    if (validacao.error) {
-        return res.status(422).send(validacao.error.details.map(detail => detail.message))
-    }
-    const cryptySenha = bcrypt.hashSync(senha, 3)
+/// usuario login, cadastro e token
+app.post("/cadastroUser", cadastroUser)
 
-    try{
-        const participanteCadstrado = await db.collection("usuario").findOne({email})
-        if (participanteCadstrado) return res.sendStatus(409)
+app.post("/loginUser", loginUser)
 
-        await db.collection("usuario").insertOne({name, email, senha: cryptySenha})
-
-        res.sendStatus(201)
-
-    }catch(err){
-        res.status(500).send(err.message)
-    }
-})
-
-/// login usuario 
-app.post("/loginUser", async (req, res)=>{
-    const { email, senha } = req.body;
-
-    const validacao = loginSchema.validate(req.body)
-
-    if (validacao.error) {
-        return res.status(422).send(validacao.error.details.map(detail => detail.message))
-    }
-
-    try {
-       
-        const user = await db.collection("usuario").findOne({email})
-        if(!user) return res.sendStatus(401) 
-
-        if(!bcrypt.compareSync(senha, user.senha)) return res.sendStatus(401)
-
-        const sessionToken = uuid()
-
-        await db.collection("sessao").insertOne({userId: user._id, sessionToken})
-        delete user.password;
-        res.status(200).send(sessionToken)
-    } catch(err) {
-        res.status(500).send(err.message)
-
-    }
-
-})
-
-//// usuario logado pegando o token 
-app.get("/usuarioLogado", async(req, res)=>{
-
-    const {autorizacao} = req.headers
-    const token = autorizacao?.replace('Bearer ', '')
-    console.log("Token:", token);
-
-    if(!token) return res.sendStatus(401)
+app.get("/usuarioLogado", usuarioLogado)
 
 
-    try{
+/// entrada/saida de valores e listagem de operações
 
-        const sessao = await db.collection("sessao").findOne({ sessionToken:token })
-        console.log("Session:", sessao);
-		if (!sessao) return res.sendStatus(401)        
+app.post("/entrada", entrada)
 
+app.post("/saida", saida)
 
-        const usuario = await db.collection("usuario").findOne({ _id: sessao.userId });
-        console.log("Usuario:", usuario);
+app.get("/operacoes", operacoes)
 
 
-        res.status(200).send(usuario)
-        
-    } catch(err) {
-        res.status(500).send(err.message)
-
-    }
-
-})
-
-/// entrada de valores - sem tokent 
-app.post("/entrada", async(req, res)=>{
-
-    const {valor, descricao} = req.body
-    const validacao = transacaoSchema.validate(req.body)
-
-    if (validacao.error) {
-        return res.status(422).send(validacao.error.details.map(detail => detail.message))
-    }
-
-    try {
-
-        const entrada = await db.collection("entrada").insertOne({valor, descricao})
-        if(!entrada) return res.status(422)
-
-
-        res.sendStatus(200)
-
-    } catch (err) {
-        res.status(500).send(err.message)
-
-    }
-
-})
-
-/// saida de valores - sem token
-
-app.post("/saida", async(req, res)=>{
-
-    const {valor, descricao} = req.body
-    const validacao = transacaoSchema.validate(req.body)
-
-    if (validacao.error) {
-        return res.status(422).send(validacao.error.details.map(detail => detail.message))
-    }
-
-    try {
-
-        const entrada = await db.collection("saida").insertOne({valor, descricao})
-        if(!entrada) return res.status(422)
-
-
-        res.sendStatus(200)
-
-    } catch (err) {
-        res.status(500).send(err.message)
-
-    }
-
-})
-
-/// listagem de operações - sem token 
-
-app.get("/operacoes", async (req, res)=>{
-
-
-    try {
-
-        const user = await db.collection("usuario").findOne({ _id: user.userId });
-        if(!user) return res.sendStatus(404)
-
-        const entrada = await db.collection("entrada").findMany({valor, descricao})
-        if(!entrada) return res.sendStatus(404)
-
-        const saida = await db.collection("saida").findMany({valor, descricao})
-        if(!saida) return res.sendStatus(404)
-
-
-        res.sendStatus(200)
-
-    } catch(err){
-        res.status(500).send(err.message)
-
-    }
-
-})
-
-    /// porta sendo utilizada
+/// porta sendo utilizada
 const PORT = 5000
 app.listen(PORT, () =>console.log(`servidor está rodando na porta ${PORT}`))
