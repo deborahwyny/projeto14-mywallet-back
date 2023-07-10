@@ -9,5 +9,5 @@ app.use(express.json())
 app.use(router)
 
 /// porta sendo utilizada
-const PORT = 5000
+const PORT = 4000
 app.listen(PORT, () =>console.log(`servidor está rodando na porta ${PORT}`))

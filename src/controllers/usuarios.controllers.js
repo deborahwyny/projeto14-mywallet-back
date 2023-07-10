@@ -10,13 +10,14 @@ import { v4 as uuid } from 'uuid';
 ///// endpoints
 export async function cadastroUser (req, res){
 
-    const {name, email, senha} = req.body
+    const {name, email, senha, repetirSenha} = req.body
     
     const validacao = cadastroSchema.validate(req.body)
     if (validacao.error) {
         return res.status(422).send(validacao.error.details.map(detail => detail.message))
     }
     const cryptySenha = bcrypt.hashSync(senha, 3)
+
 
     try{
         const participanteCadstrado = await db.collection("usuario").findOne({email})
@@ -41,6 +42,9 @@ export async function loginUser (req, res){
     }
 
     try {
+
+        const usuarioCadastrado = await db.collection("usuario").findOne({email})
+        if(!usuarioCadastrado) return res.sendStatus(404)
        
         const user = await db.collection("usuario").findOne({email})
         if(!user) return res.sendStatus(401) 
@@ -78,8 +82,13 @@ export async function usuarioLogado (req, res){
         const usuario = await db.collection("usuario").findOne({ _id: sessao.userId });
         console.log("Usuario:", usuario);
 
+        const tokenUsuario = {
+            token: token,
+            usuario: usuario
+          };
 
-        res.status(200).send(usuario)
+
+        res.status(200).send(tokenUsuario)
         
     } catch(err) {
         res.status(500).send(err.message)
